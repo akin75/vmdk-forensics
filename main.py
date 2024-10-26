@@ -29,6 +29,7 @@ if __name__ == '__main__':
     print(f"Element: {next(islice(generator, 1, 1 + 1), None)}")
     print(f"Element at Position 1: {utils.give_block_at_specified_pos(gen=generator, pos=1)}")
 
-    vmdk_file.close_handle()
+
     #pool.close()
     #pool.join()
+    vmdk_file.close_handle()
