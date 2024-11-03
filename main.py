@@ -4,7 +4,9 @@ import pyvmdk
 #import math
 #import sys
 #import argparse
-#import time
+import os
+import time
+from datetime import datetime
 from BlockDevice import BlockDevice
 from itertools import islice
 from multiprocessing import Pool
@@ -18,18 +20,22 @@ if __name__ == '__main__':
 
     #pool = Pool(processes=4)
     # Construction of a Generator with given block_size -> in this case 64 (parameter)
+    start = datetime.now()
     generator = vmdk_file.construct_blocks(64)
     # Generator wird zu groß und wird erschöpft. Ein guter Ansatz wäre, während dem iterieren schon das rechnen der Entropie zu implementieren.
-
-    print(pyvmdk.get_version())
+    with open("output.txt", "w") as f:
+        for i,element in enumerate(generator):
+            #print(f"Element: {element} at position {i}\n")
+            f.write(f"Element: {element} at position {i}\n")
+    print(f"Time taken: {(datetime.now() - start).total_seconds()}")
+    #print(pyvmdk.get_version())
     # Prints the disk type -> MONOLITHIC FLAT
-    vmdk_file.get_disk_type_of_vmdk()
+    #vmdk_file.get_get_disk_type_and_size_of_vmdk()
 
     # Prints the first position
-    print(f"Element: {next(islice(generator, 1, 1 + 1), None)}")
-    print(f"Element at Position 1: {utils.give_block_at_specified_pos(gen=generator, pos=1)}")
+    #print(f"Element: {next(islice(generator, 1, 1 + 1), None)}")
+    #print(f"Element at Position 1: {utils.give_block_at_specified_pos(gen=generator, pos=1)}")
 
-
-    #pool.close()
     #pool.join()
+    #pool.close()
     vmdk_file.close_handle()

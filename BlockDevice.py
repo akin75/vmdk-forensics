@@ -11,7 +11,7 @@ class BlockDevice:
         vmdk_handle.open(file_object, "r")
         vmdk_handle.open_extent_data_files()
 
-    def get_disk_type_of_vmdk(self):
+    def get_disk_type_and_size_of_vmdk(self):
         print(f"Media Size: {self.vmdk_handle.get_media_size()}")
         print(f"Disk Type: {self.vmdk_handle.get_disk_type()}")
         if  self.vmdk_handle.get_disk_type() == 1:
