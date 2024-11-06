@@ -65,3 +65,15 @@ class BlockDevice:
 
     def close_handle(self):
         self.vmdk_handle.close()
+
+    def get_size(self):
+        return self.vmdk_handle.get_media_size()
+
+    def vmdk_seek(self, start_offset):
+        return self.vmdk_handle.seek(start_offset)
+
+    def vmdk_tell(self):
+        return self.vmdk_handle.tell()
+
+    def vmdk_read(self, chunk_size):
+        return self.vmdk_handle.read(chunk_size)
