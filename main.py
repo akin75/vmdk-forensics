@@ -59,27 +59,28 @@ def process_section(file_object: BlockDevice, args, chunk_size: int):
 if __name__ == '__main__':
     # instantiating Blockdevice class -> open VMDK file.
     vmdk_file = BlockDevice(file_object="Metasploitable 2_1.vmdk")
-    block_size = 64
+    chunk_size = 64
     num_processes = 4
     file_size_test = os.path.getsize("Metasploitable 2_1-flat.vmdk")
 
-    with Pool(processes=num_processes) as pool:
-        sections = split_file_into_sections(vmdk_file, block_size, num_processes)
-        pool.map(process_section, vmdk_file, sections) # start map
-        pass
+    with Pool(processes=num_processes) as p:
+        sections = split_file_into_sections(vmdk_file, chunk_size, num_processes)
+        results = p.starmap(process_section, (sections, chunk_size)) # TypeError: cannot pickle 'generator' object
+        print(results)
 
-    for start_offset, actual_block_size in split_file_into_sections(vmdk_file, block_size, num_processes):
-        print(f"Start Offset: {start_offset}, Block Size: {actual_block_size}")
+    #for start_offset, actual_block_size in split_file_into_sections(vmdk_file, block_size, num_processes):
+    #    print(f"Start Offset: {start_offset}, Block Size: {actual_block_size}")
 
-    sections = split_file_into_sections(vmdk_file, block_size, num_processes)
-    for i, (start_offset, actual_block_size) in enumerate(sections, start=1):
-        print(f"Index: {i}, Start Offset: {start_offset}, Block Size: {actual_block_size}")
+    #sections = split_file_into_sections(vmdk_file, block_size, num_processes)
+    #for i, (start_offset, actual_block_size) in enumerate(sections, start=1):
+    #    print(f"Index: {i}, Start Offset: {start_offset}, Block Size: {actual_block_size}")
 
-    sections_test = split_file_into_sections(vmdk_file, block_size, num_processes)
-    process_blocks_test = process_section(vmdk_file, sections_test, block_size)
-    for chunk in process_blocks_test:
-        print(f"THIS IS CHUNK {chunk}")
-    #pool = Pool(processes=4)
+    #sections_test = split_file_into_sections(vmdk_file, block_size, num_processes)
+    #process_blocks_test = process_section(vmdk_file, sections_test, block_size)
+    #for chunk in process_blocks_test:
+    #    print(f"THIS IS CHUNK {chunk}")
+
+
     # Construction of a Generator with given block_size -> in this case 64 (parameter)
     start = datetime.now()
     generator = vmdk_file.construct_blocks(64)
