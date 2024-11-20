@@ -29,7 +29,6 @@ def process_chunks(vmdk_file, num_process, chunk_size, process_number):
         file_size = f.seek(0, 2)
         section_size = file_size // num_process
         block_count = file_size // chunk_size
-        blocks_per_process = block_count // num_process
         start_offset = process_number * section_size
 
         f.seek(start_offset) # Starting to read at the beginning
