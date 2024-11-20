@@ -18,17 +18,17 @@ import utils
 logging.basicConfig(
     level=logging.DEBUG,
     format='%(asctime)s - %(processName)s - PID: %(process)d - %(levelname)s - %(message)s',
-    handlers=[logging.StreamHandler()],
-    filename="outputLogs.log"
+    handlers=[logging.StreamHandler(), logging.FileHandler('log.log')],
 )
 
 
-def process_chunks(vmdk_file, num_process, chunk_size, process_number):
+def read_chunks_of_vmdk(vmdk_file, num_process, chunk_size, process_number):
     lock = multiprocessing.Lock()
     with open(vmdk_file, "rb") as f:
         file_size = f.seek(0, 2)
         section_size = file_size // num_process
         block_count = file_size // chunk_size
+        blocks_per_process = block_count // num_process
         start_offset = process_number * section_size
 
         f.seek(start_offset) # Starting to read at the beginning
@@ -47,6 +47,11 @@ def process_chunks(vmdk_file, num_process, chunk_size, process_number):
             bytes_read += current_chunk_size
     return
 
+# A function to do the tasks with Multiprocessing
+def multiprocessing_section():
+    pass
+
+
 
 
 
@@ -54,12 +59,12 @@ if __name__ == '__main__':
     # instantiating Blockdevice class -> open VMDK file.
     vmdk_file = BlockDevice(file_object="Metasploitable 2_1.vmdk")
     vmdk_file2 = "500MB_Test-flat.vmdk"
-    chunk_size = 2048
+    chunk_size = 4096
     num_processes = 8
     file_size_test = os.path.getsize(vmdk_file2)
     start = datetime.now()
     with Pool(processes=num_processes) as pool:
-        results = pool.starmap(process_chunks, [(vmdk_file2, num_processes, chunk_size, i) for i in range(num_processes)])
+        results = pool.starmap(read_chunks_of_vmdk, [(vmdk_file2, num_processes, chunk_size, i) for i in range(num_processes)])
     print(f"File Size of vmdk_file2: {file_size_test}")
     print(f"Time taken: {(datetime.now() - start).total_seconds()} Sekunden")
 
