@@ -1,6 +1,11 @@
 from argparse import ArgumentParser
 from itertools import islice
 from typing import Generator
+from scipy.stats import entropy
+import numpy as np
+
+def calculate_entropy(chunk):
+    pass
 
 
 

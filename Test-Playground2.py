@@ -17,11 +17,11 @@ def chunk_generator(file_path, chunk_size):
 # Funktion, die den Chunk verarbeitet (zum Beispiel die Länge des Chunks zurückgibt)
 def process_chunk(chunk):
     # Hier könntest du komplexe Verarbeitung durchführen
-    return chunk
+    return chunk.decode("utf-8")
 
 
 if __name__ == '__main__':
-    file_path = 'Metasploitable 2_1-flat.vmdk'  # Beispiel-Dateipfad
+    file_path = '500MB_Test-flat.vmdk'  # Beispiel-Dateipfad
     chunk_size = 2048  # Größe eines Chunks in Bytes
 
     # Multiprocessing mit Pool

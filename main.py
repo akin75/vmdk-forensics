@@ -1,4 +1,5 @@
 import multiprocessing
+from fileinput import filename
 from typing import Generator
 import pyvmdk
 #import pytsk3
@@ -10,11 +11,20 @@ import time
 from datetime import datetime
 from BlockDevice import BlockDevice
 from itertools import islice
-from multiprocessing import Pool, current_process
+from multiprocessing import Pool, current_process, Lock
+import logging
 import utils
+
+logging.basicConfig(
+    level=logging.DEBUG,
+    format='%(asctime)s - %(processName)s - PID: %(process)d - %(levelname)s - %(message)s',
+    handlers=[logging.StreamHandler()],
+    filename="outputLogs.log"
+)
 
 
 def process_chunks(vmdk_file, num_process, chunk_size, process_number):
+    lock = multiprocessing.Lock()
     with open(vmdk_file, "rb") as f:
         file_size = f.seek(0, 2)
         section_size = file_size // num_process
@@ -32,14 +42,11 @@ def process_chunks(vmdk_file, num_process, chunk_size, process_number):
             chunk = f.read(current_chunk_size)
             if not chunk:
                 break
-            print(f"Prozess: {multiprocessing.current_process().name}" , f" PID: {multiprocessing.current_process().pid}" , f" Read Bytes:  {chunk} \n")
+            with lock:
+                logging.info(f" -- Read Bytes: {chunk} \n ")
+            #print(f"Prozess: {multiprocessing.current_process().name}" , f" PID: {multiprocessing.current_process().pid}" , f" Read Bytes:  {chunk} \n")
             bytes_read += current_chunk_size
     return
-
-
-
-
-
 
 
 
@@ -47,14 +54,15 @@ def process_chunks(vmdk_file, num_process, chunk_size, process_number):
 if __name__ == '__main__':
     # instantiating Blockdevice class -> open VMDK file.
     vmdk_file = BlockDevice(file_object="Metasploitable 2_1.vmdk")
-    vmdk_file2 = "Carve1.bin"
-    chunk_size = 6
-    num_processes = 4
-    file_size_test = os.path.getsize("Metasploitable 2_1-flat.vmdk")
-
+    vmdk_file2 = "500MB_Test-flat.vmdk"
+    chunk_size = 2048
+    num_processes = 8
+    file_size_test = os.path.getsize(vmdk_file2)
+    start = datetime.now()
     with Pool(processes=num_processes) as pool:
         results = pool.starmap(process_chunks, [(vmdk_file2, num_processes, chunk_size, i) for i in range(num_processes)])
     print(f"File Size of vmdk_file2: {file_size_test}")
+    print(f"Time taken: {(datetime.now() - start).total_seconds()} Sekunden")
 
     #for start_offset, actual_block_size in split_file_into_sections(vmdk_file, block_size, num_processes):
     #    print(f"Start Offset: {start_offset}, Block Size: {actual_block_size}")
@@ -67,17 +75,6 @@ if __name__ == '__main__':
     #process_blocks_test = process_section(vmdk_file, sections_test, block_size)
     #for chunk in process_blocks_test:
     #    print(f"THIS IS CHUNK {chunk}")
-
-
-    # Construction of a Generator with given block_size -> in this case 64 (parameter)
-    start = datetime.now()
-    generator = vmdk_file.construct_blocks(64)
-    # Generator wird zu groß und wird erschöpft. Ein guter Ansatz wäre, während dem iterieren schon das rechnen der Entropie zu implementieren.
-    with open("output.txt", "w") as f:
-        for i,element in enumerate(generator):
-            #print(f"Element: {element} at position {i}\n")
-            f.write(f"Element: {element} at position {i}\n")
-    print(f"Time taken: {(datetime.now() - start).total_seconds()} Sekunden")
 
     print("Cpu count: ", os.cpu_count())
 
