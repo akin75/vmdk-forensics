@@ -1,34 +1,39 @@
-import multiprocessing
-from fileinput import filename
-from typing import Generator
-import pyvmdk
-#import pytsk3
-#import math
+#import pyvmdk
 #import sys
 #import argparse
 import os
-import time
+#import time
 from datetime import datetime
-from BlockDevice import BlockDevice
-from itertools import islice
-from multiprocessing import Pool, current_process, Lock
+from scipy.stats import entropy
+import numpy as np
+#from BlockDevice import BlockDevice
+from multiprocessing import Pool, current_process, Lock, Manager
 import logging
-import utils
+#import utils
 
 logging.basicConfig(
     level=logging.DEBUG,
     format='%(asctime)s - %(processName)s - PID: %(process)d - %(levelname)s - %(message)s',
-    handlers=[logging.StreamHandler(), logging.FileHandler('log.log')],
+    handlers=[logging.StreamHandler()],
 )
 
+def calculate_entropy(chunk):
+    # Handling 0 Bytes
+    if chunk is None or len(chunk) == 0:
+        logging.warning('Empty chunk')
+        return 0
+    # Zählen wie oft jedes Element(Byte) vorkommt.
+    byte_count = np.bincount(chunk, minlength=256)
+    #
+    probabilities = byte_count / np.sum(byte_count)
+    return entropy(probabilities)
 
-def read_chunks_of_vmdk(vmdk_file, num_process, chunk_size, process_number):
-    lock = multiprocessing.Lock()
+
+def read_chunks_of_vmdk(vmdk_file, num_process, chunk_size, lock, process_number):
+
     with open(vmdk_file, "rb") as f:
         file_size = f.seek(0, 2)
         section_size = file_size // num_process
-        block_count = file_size // chunk_size
-        blocks_per_process = block_count // num_process
         start_offset = process_number * section_size
 
         f.seek(start_offset) # Starting to read at the beginning
@@ -41,8 +46,11 @@ def read_chunks_of_vmdk(vmdk_file, num_process, chunk_size, process_number):
             chunk = f.read(current_chunk_size)
             if not chunk:
                 break
+
+            chunk_entropy = calculate_entropy(np.frombuffer(chunk, dtype=np.uint8))
+
             with lock:
-                logging.info(f" -- Read Bytes: {chunk} \n ")
+                logging.info(f"Entropie: {chunk_entropy:.5f} - Read Bytes: {chunk} \n ")
             #print(f"Prozess: {multiprocessing.current_process().name}" , f" PID: {multiprocessing.current_process().pid}" , f" Read Bytes:  {chunk} \n")
             bytes_read += current_chunk_size
     return
@@ -56,15 +64,18 @@ def multiprocessing_section():
 
 
 if __name__ == '__main__':
-    # instantiating Blockdevice class -> open VMDK file.
-    vmdk_file = BlockDevice(file_object="Metasploitable 2_1.vmdk")
-    vmdk_file2 = "500MB_Test-flat.vmdk"
+    #lock = logging.getLogger(__name__)
+    #vmdk_file = BlockDevice(file_object="Metasploitable 2_1.vmdk")
+    vmdk_file2 = "100MB_Test-flat.vmdk.akira"
     chunk_size = 4096
     num_processes = 8
     file_size_test = os.path.getsize(vmdk_file2)
     start = datetime.now()
-    with Pool(processes=num_processes) as pool:
-        results = pool.starmap(read_chunks_of_vmdk, [(vmdk_file2, num_processes, chunk_size, i) for i in range(num_processes)])
+
+    with Manager() as manager:
+        lock = manager.Lock()
+        with Pool(processes=num_processes) as pool:
+            results = pool.starmap(read_chunks_of_vmdk, [(vmdk_file2, num_processes, chunk_size, lock, i) for i in range(num_processes)])
     print(f"File Size of vmdk_file2: {file_size_test}")
     print(f"Time taken: {(datetime.now() - start).total_seconds()} Sekunden")
 
@@ -92,11 +103,4 @@ if __name__ == '__main__':
 
     #pool.close()
     #pool.join()
-    file_size = vmdk_file.get_size()
-    print(f"File size: {file_size}")
-    print(file_size // 64)
-    block_count = file_size // 64
-    print(f"{file_size} // 64 blocks = ", file_size // 64)
-    print(f"{block_count} // 4 processes = ", block_count // 4)
-    print(f"This is f: ", file_size_test)
-    vmdk_file.close_handle()
+
