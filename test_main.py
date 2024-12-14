@@ -7,7 +7,7 @@ def test_calculate_entropy():
     expected_entropy = 5.71875
     actual_entropy = calculate_entropy(array)
     print(f"Actual Entropy: rounded {actual_entropy}")
-    assert calculate_entropy(array) == expected_entropy
+    assert actual_entropy == expected_entropy
 
 
 
