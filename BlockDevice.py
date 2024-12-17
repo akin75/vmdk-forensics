@@ -1,8 +1,8 @@
-#import pyvmdk
+import pyvmdk
 
 class BlockDevice:
     # When initialized open vmdk file
-    #vmdk_handle = pyvmdk.handle()
+    vmdk_handle = pyvmdk.handle()
 
     def __init__(self, file_object: str):
         self.list_of_blocks = []
