@@ -53,27 +53,27 @@ def read_chunks_of_vmdk(vmdk_file, num_process, chunk_size, lock, process_number
                 break
 
             chunk_entropy = calculate_entropy(np.frombuffer(chunk, dtype=np.uint8))
-
-            with lock:
-                logging.info(f"Entropy: {chunk_entropy:.5f} - Read Bytes: {chunk} \n ")
-
+            #yield chunk
+            if chunk_entropy > 7.2:
+                with lock:
+                    logging.info(f"Entropy: {chunk_entropy:.5f} - Read Bytes: {chunk} \n ")
+            else:
+                with lock:
+                    with open("datastream.txt", "a") as f2:
+                        f2.write(f"Process: {process_number}\n, Entropy: {chunk_entropy:.5f}\n, Chunk: {chunk.hex()}\n;")
             bytes_read += current_chunk_size
+
+        print("FINISH!")
+
     return
-
-# A function to do the tasks with Multiprocessing
-def multiprocessing_section():
-    pass
-
-
-
 
 
 if __name__ == '__main__':
     #logger = logging.getLogger(__name__)
     #vmdk_file = BlockDevice(file_object="100MB_Test.vmdk.akira")
-    vmdk_file2 = "D:\\Akira\\100MB\\100MB_Test-flat.vmdk.akira"
+    vmdk_file2 = "100MB_Test-flat.vmdk.akira"
     chunk_size = 4096
-    num_processes = 8
+    num_processes = 6
     file_size_test = os.path.getsize(vmdk_file2)
     start = datetime.now()
 
@@ -81,5 +81,6 @@ if __name__ == '__main__':
         lock = manager.Lock()
         with Pool(processes=num_processes) as pool:
             results = pool.starmap(read_chunks_of_vmdk, [(vmdk_file2, num_processes, chunk_size, lock, i) for i in range(num_processes)])
+
     print(f"File Size of vmdk_file2: {file_size_test}")
     print(f"Time taken: {(datetime.now() - start).total_seconds()} seconds")
