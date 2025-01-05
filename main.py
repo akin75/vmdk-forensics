@@ -3,84 +3,70 @@
 import os
 #import time
 from datetime import datetime
-from scipy.stats import entropy
 import numpy as np
 #from BlockDevice import BlockDevice
-from multiprocessing import Pool, current_process, Lock, Manager
+from multiprocessing import Pool, current_process
 import logging
-#import utils
+import utils
 
 
+logger = logging.getLogger(__name__)
+#logging.basicConfig(
+#    level=logging.DEBUG,
+#    format='%(asctime)s - %(processName)s - PID: %(process)d - %(levelname)s - %(message)s',
+#    handlers=[logging.StreamHandler()],
+#)
 
-logging.basicConfig(
-    level=logging.DEBUG,
-    format='%(asctime)s - %(processName)s - PID: %(process)d - %(levelname)s - %(message)s',
-    handlers=[logging.StreamHandler()],
-)
-
-def calculate_entropy(chunk):
-    # Handling 0 Bytes
-    if chunk is None or len(chunk) == 0:
-        logging.warning('Empty chunk')
-        return 0
-
-    # Zählen wie oft jedes Element(Byte) vorkommt.
-    byte_count = np.bincount(chunk, minlength=256)
-
-    # Array, mit der relativen Häufigkeit (Wahrscheinlichkeit) von jedem Byte.
-    probabilities = byte_count / np.sum(byte_count)
-
-    return entropy(probabilities, base=2)
-
-
-def read_chunks_of_vmdk(vmdk_file, num_process, chunk_size, lock, process_number):
+def read_chunks_of_vmdk(vmdk_file, block_size):
+    print("ICH BIN HIER")
+    filesize = os.path.getsize(vmdk_file)
+    bytes_read = 0
 
     with open(vmdk_file, "rb") as f:
-        file_size = f.seek(0, 2)
-        section_size = file_size // num_process
-        start_offset = process_number * section_size
 
-        f.seek(start_offset) # Starting to read at the beginning
+        f.seek(0)
 
-        bytes_read = 0 # temporary storage of bytes
+        while bytes_read < filesize:
 
-        while bytes_read < section_size:
-            remaining_bytes = section_size - bytes_read
-            current_chunk_size = min(chunk_size, remaining_bytes)
-            chunk = f.read(current_chunk_size)
+            remaining_bytes = filesize - bytes_read
+            current_block_size = min(block_size, remaining_bytes)
+            block = f.read(block_size)
+            current_pos = f.tell()
 
-            if not chunk:
+            if not block:
                 break
+            yield block, current_pos
 
-            chunk_entropy = calculate_entropy(np.frombuffer(chunk, dtype=np.uint8))
-            #yield chunk
-            if chunk_entropy > 7.2:
-                with lock:
-                    logging.info(f"Entropy: {chunk_entropy:.5f} - Read Bytes: {chunk} \n ")
-            else:
-                with lock:
-                    with open("datastream.txt", "a") as f2:
-                        f2.write(f"Process: {process_number}\n, Entropy: {chunk_entropy:.5f}\n, Chunk: {chunk.hex()}\n;")
-            bytes_read += current_chunk_size
+            bytes_read += current_block_size
 
-        print("FINISH!")
 
-    return
+
+def processing_section(args):
+
+    block, current_pos = args
+
+    block_entropy = utils.calculate_entropy(np.frombuffer(block, dtype=np.uint8))
+
+    if block_entropy > 7.90:
+        # chunk_chisquare = calculate_chisquare(...)
+        print(f"Process: {current_process().name}, Entropy: {block_entropy:.5f} - Read Bytes: {block.hex()} \n")
+
+    return block_entropy, current_pos, block
 
 
 if __name__ == '__main__':
     #logger = logging.getLogger(__name__)
     #vmdk_file = BlockDevice(file_object="100MB_Test.vmdk.akira")
     vmdk_file2 = "100MB_Test-flat.vmdk.akira"
-    chunk_size = 4096
+    block_size = 4096
     num_processes = 6
-    file_size_test = os.path.getsize(vmdk_file2)
     start = datetime.now()
 
-    with Manager() as manager:
-        lock = manager.Lock()
-        with Pool(processes=num_processes) as pool:
-            results = pool.starmap(read_chunks_of_vmdk, [(vmdk_file2, num_processes, chunk_size, lock, i) for i in range(num_processes)])
+    with Pool(processes=num_processes) as pool:
+        results = pool.imap(processing_section, read_chunks_of_vmdk(vmdk_file2, block_size), chunksize=10)
+        pool.close()
+        pool.join()
+    for i, (block_entropy, current_pos, block)  in enumerate(results):
+        print(f"Position: {i}, Entropy: {block_entropy}, Current Position: {current_pos}, Chunk: {utils.to_hex(block)}\n")
 
-    print(f"File Size of vmdk_file2: {file_size_test}")
     print(f"Time taken: {(datetime.now() - start).total_seconds()} seconds")
