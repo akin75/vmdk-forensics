@@ -19,12 +19,20 @@ def calculate_entropy(chunk):
 
     return entropy(probabilities, base=2)
 
+# https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.chisquare.html#r81ecfb019d82-1
+# Es ist möglich die ChiSquare Berechnung auch nur mit den Observed Frequencies zu machen
 def calculate_chi2(chunk):
     if chunk is None or len(chunk) == 0:
         logging.warning('Empty chunk')
 
-    chisquare(chunk)
-    return 0
+    f_obs = np.bincount(np.frombuffer(chunk, dtype=np.uint8), minlength=256)
+
+
+
+    # Gibt ein Objekt mit den Variablen -> statistic (chi-squared statistic(Float-Wert)) und pvalue (Der p-Wert des Tests(Float Wert))
+    chi2_statistic, p_value = chisquare(chunk)
+    
+    return chi2_statistic, p_value
 
 def to_hex(block):
     formatted_hex = ' '.join(['{:02x}'.format(b) for b in block])

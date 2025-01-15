@@ -51,7 +51,7 @@ def processing_section(args):
         # chunk_chisquare = calculate_chisquare(...)
         print(f"Process: {current_process().name}, Entropy: {block_entropy:.5f} - Read Bytes: {block.hex()} \n")
 
-    return block_entropy, current_pos, block
+    #return block_entropy, current_pos, block
 
 
 if __name__ == '__main__':
@@ -66,7 +66,7 @@ if __name__ == '__main__':
         results = pool.imap(processing_section, read_chunks_of_vmdk(vmdk_file2, block_size), chunksize=10)
         pool.close()
         pool.join()
-    for i, (block_entropy, current_pos, block)  in enumerate(results):
-        print(f"Position: {i}, Entropy: {block_entropy}, Current Position: {current_pos}, Chunk: {utils.to_hex(block)}\n")
+    #for i, (block_entropy, current_pos, block)  in enumerate(results):
+    #    print(f"Position: {i}, Entropy: {block_entropy}, Current Position: {current_pos}, Chunk: {utils.to_hex(block)}\n")
 
     print(f"Time taken: {(datetime.now() - start).total_seconds()} seconds")
