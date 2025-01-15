@@ -46,3 +46,8 @@ def give_block_at_specified_pos(gen: Generator, pos: int):
 
 def argparse():
     parser = ArgumentParser(description="Detect intermittent encryption and extract unencrypted blocks")
+    parser.add_argument('file', metavar='file', help='files to process', type=str)
+    parser.add_argument('block_size', metavar='blocksize', help='block size to use', type=int)
+    parser.add_argument('num_processes', metavar='numprocesses', help='number of processes', type=int)
+    args = parser.parse_args()
+    return args

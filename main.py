@@ -7,7 +7,7 @@ import numpy as np
 #from BlockDevice import BlockDevice
 from multiprocessing import Pool, current_process
 import logging
-import utils
+from utils import calculate_entropy, calculate_chi2, argparse
 
 
 logger = logging.getLogger(__name__)
@@ -45,11 +45,12 @@ def processing_section(args):
 
     block, current_pos = args
 
-    block_entropy = utils.calculate_entropy(np.frombuffer(block, dtype=np.uint8))
+    block_entropy = calculate_entropy(np.frombuffer(block, dtype=np.uint8))
 
     if block_entropy > 7.90:
         # chunk_chisquare = calculate_chisquare(...)
-        print(f"Process: {current_process().name}, Entropy: {block_entropy:.5f} - Read Bytes: {block.hex()} \n")
+        print(f"Process: {current_process().name}, Entropy: {block_entropy:.5f}, Position: {current_pos}\n")
+
 
     #return block_entropy, current_pos, block
 
@@ -57,9 +58,11 @@ def processing_section(args):
 if __name__ == '__main__':
     #logger = logging.getLogger(__name__)
     #vmdk_file = BlockDevice(file_object="100MB_Test.vmdk.akira")
-    vmdk_file2 = "100MB_Test-flat.vmdk.akira"
-    block_size = 4096
-    num_processes = 6
+    #"100MB_Test-flat.vmdk.akira"
+    args = argparse()
+    vmdk_file2 = args.file
+    block_size = args.block_size
+    num_processes = args.num_processes
     start = datetime.now()
 
     with Pool(processes=num_processes) as pool:
