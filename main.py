@@ -1,24 +1,22 @@
 #import sys
-#import argparse
 import os
 #import time
 from datetime import datetime
 import numpy as np
 #from BlockDevice import BlockDevice
-from multiprocessing import Pool, current_process
+from multiprocessing import Pool, current_process, Lock
 import logging
-from utils import calculate_entropy, calculate_chi2, argparse
-
+from utils import calculate_chi2, argparse, to_hex, calculate_shannon_entropy, to_bin
 
 logger = logging.getLogger(__name__)
-#logging.basicConfig(
-#    level=logging.DEBUG,
-#    format='%(asctime)s - %(processName)s - PID: %(process)d - %(levelname)s - %(message)s',
-#    handlers=[logging.StreamHandler()],
-#)
+lock = Lock()
+logging.basicConfig(
+    level=logging.DEBUG,
+    format='%(asctime)s - %(processName)s - PID: %(process)d - %(levelname)s - %(message)s',
+    handlers=[logging.StreamHandler()],
+)
 
 def read_chunks_of_vmdk(vmdk_file, block_size):
-    print("ICH BIN HIER")
     filesize = os.path.getsize(vmdk_file)
     bytes_read = 0
 
@@ -32,7 +30,7 @@ def read_chunks_of_vmdk(vmdk_file, block_size):
             current_block_size = min(block_size, remaining_bytes)
             block = f.read(block_size)
             current_pos = f.tell()
-
+            #print("READING")
             if not block:
                 break
             yield block, current_pos
@@ -42,17 +40,19 @@ def read_chunks_of_vmdk(vmdk_file, block_size):
 
 
 def processing_section(args):
-
+    #print("Process Starting")
     block, current_pos = args
 
-    block_entropy = calculate_entropy(np.frombuffer(block, dtype=np.uint8))
+    block_entropy = calculate_shannon_entropy(np.frombuffer(block, dtype=np.uint8))
 
-    if block_entropy > 7.90:
+    with lock:
+        if block_entropy > 7.90:
         # chunk_chisquare = calculate_chisquare(...)
-        print(f"Process: {current_process().name}, Entropy: {block_entropy:.5f}, Position: {current_pos}\n")
+        #print(f"Process: {current_process().name}, Entropy: {block_entropy:.5f}, Position: {current_pos} \n")
+            logger.info(f" Entropy: {block_entropy:.5f}, Position: {current_pos}")
 
-
-    #return block_entropy, current_pos, block
+    #print("Shannon Entropy Calculation Ended")
+    return block_entropy, current_pos, to_bin(block)
 
 
 if __name__ == '__main__':
@@ -66,10 +66,14 @@ if __name__ == '__main__':
     start = datetime.now()
 
     with Pool(processes=num_processes) as pool:
-        results = pool.imap(processing_section, read_chunks_of_vmdk(vmdk_file2, block_size), chunksize=10)
+        results = pool.imap(processing_section, read_chunks_of_vmdk(vmdk_file2, block_size))
         pool.close()
         pool.join()
+
     #for i, (block_entropy, current_pos, block)  in enumerate(results):
-    #    print(f"Position: {i}, Entropy: {block_entropy}, Current Position: {current_pos}, Chunk: {utils.to_hex(block)}\n")
+    #    with open("output.txt", "a") as f:
+    #        f.write(f"{block_entropy}\t{current_pos:.5f}\t{block}\n")
+    #print("Finished Writing")
+
 
     print(f"Time taken: {(datetime.now() - start).total_seconds()} seconds")
