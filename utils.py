@@ -44,6 +44,6 @@ def argparse():
     parser.add_argument('block_size', metavar='blocksize', help='block size to use', type=int, default=4096)
     parser.add_argument('num_processes', metavar='numprocesses', help='number of processes', type=int)
     #parser.add_argument('output-file', metavar='outputfile', help='file to store output', type=str)
-    #parser.add_argument('output-mode', metavar='outputmode', help='chunk size', type=int)
+    parser.add_argument('outputmode', metavar='outputmode', help='chunk size', type=int, default=0)
     args = parser.parse_args()
     return args
