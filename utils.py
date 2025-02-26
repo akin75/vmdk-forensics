@@ -1,3 +1,4 @@
+import os
 from argparse import ArgumentParser
 from scipy.stats import entropy, chi2, chisquare
 import numpy as np
@@ -24,9 +25,9 @@ def calculate_chi2(chunk):
         logging.warning('Empty chunk')
 
     f_obs = np.bincount(np.frombuffer(chunk, dtype=np.uint8), minlength=256)
-
+    f_exp = np.full(256, len(chunk) / 256)
     # Gibt ein Objekt mit den Variablen = statistic (chi-squared statistic(Float-Wert)) und p-value (Der p-Wert des Tests(Float Wert))
-    chi2_statistic, p_value = chisquare(chunk)
+    chi2_statistic, p_value = chisquare(f_obs, f_exp)
     
     return chi2_statistic, p_value
 
@@ -38,12 +39,31 @@ def to_bin(block):
     formatted_bin = ' '.join(f'{byte:08b}' for byte in block)
     return formatted_bin
 
+def convert_to_nibbles(block):
+    for byte in block:
+        yield byte >> 4
+        yield byte & 0x0F
+
 def argparse():
     parser = ArgumentParser(description="Detect intermittent encryption and extract unencrypted blocks")
-    parser.add_argument('file', metavar='file', help='files to process', type=str)
-    parser.add_argument('block_size', metavar='blocksize', help='block size to use', type=int, default=4096)
-    parser.add_argument('num_processes', metavar='numprocesses', help='number of processes', type=int)
-    #parser.add_argument('output-file', metavar='outputfile', help='file to store output', type=str)
-    parser.add_argument('outputmode', metavar='outputmode', help='chunk size', type=int, default=0)
+
+    parser.add_argument('-i', '--input', metavar='FILE', required=True, help='Vmdk file to process', type=str)
+
+    #parser.add_argument('-o', '--output', metavar='FILE', required=True, help='File to store output', type=str)
+
+    parser.add_argument('-block', '--block_size', metavar='SIZE', help='Block size to use', type=int, default=4096, dest="block_size")
+
+    parser.add_argument('-p', '--processes', metavar='NUM', required=True, help='Number of processes to use', type=int)
+
+    #parser.add_argument('-m','--mode', metavar='MODE', required=True, help='Output mode', type=int, default=0)
+
     args = parser.parse_args()
+
+    # Check for VMDK file
+    #if "vmdk" not in args.input.lower():
+    #    parser.error('Input file must be vmdk')
+    # Check if file exists
+    #if not os.path.isfile(args.input):
+    #    parser.error(f"Input file {args.input} does not exist")
+
     return args

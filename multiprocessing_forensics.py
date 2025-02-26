@@ -21,7 +21,7 @@ def multi_processing_section(lock, logger, vmdk_file, block_size, shared_offset,
         while True:
 
             # Take a short break after every 10th block read
-            if reading_counter % 10 == 0 and reading_counter != 0:
+            if reading_counter % 20 == 0 and reading_counter != 0:
                 print(f"{current_process().name}: Now sleeping!\n")
                 time.sleep(0.1)
 
@@ -59,18 +59,18 @@ def multi_processing_section(lock, logger, vmdk_file, block_size, shared_offset,
                     logger.warning(f"Process: {current_process().name}, Counter: {reading_counter},read from offset: {shared_offset.value} : {block_entropy} Entropy \n")
                 #logger.info(f"Process: {process_id}, Counter: {counter.value},read from offset: {pos} : {block} bytes \n")
                 #print(f"Process: {current_process().name}, read from offset: {pos} : {block} \n")
-                #    block_chi2_statistic, p_value = calculate_chi2(np.frombuffer(block, dtype=np.uint8))
+                #    chi2_statistic, p_value = calculate_chi2(np.frombuffer(block, dtype=np.uint8))
                 #    if p_value > 0.05 :
-                #        pass
+                #        sus
                 #    elif p_value < 0.05 :
-                #        pass
+                #        not sus
                 else:
                     if output_mod == 0:
-                        output_file.write(f"{current_process().name}: Offset-{shared_offset.value}, Block: {block}\n")
+                        output_file.write(f"{current_process().name} : Entropy: {block_entropy}, Offset-{shared_offset.value}, Block: {block}\n")
                     elif output_mod == 1:
-                        output_file.write(f"{current_process().name}: Offset-{shared_offset.value}, Block: {to_hex(block)}\n")
+                        output_file.write(f"{current_process().name} : Offset-{shared_offset.value}, Block: {to_hex(block)}\n")
                     elif output_mod == 2:
-                        output_file.write(f"{current_process().name}: Offset-{shared_offset.value}, Block: {to_bin(block)}\n")
+                        output_file.write(f"{current_process().name} : Offset-{shared_offset.value}, Block: {to_bin(block)}\n")
 
 
                 # ---------- Ende Berechnung ----------
@@ -111,8 +111,8 @@ if __name__ == '__main__':
 
     output_mode = args.outputmode
 
-    # Creates a common counter (integer) that is used by all processes
-    counter = Value('i', 0)
+    # Creates a common counter (Long) that is used by all processes
+    counter = Value('l', 0)
 
     # Starts the time measurement to calculate the total duration of the programme
     start = datetime.now()
