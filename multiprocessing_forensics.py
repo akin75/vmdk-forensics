@@ -2,11 +2,13 @@ import os
 import time
 from datetime import datetime
 import numpy as np
-from multiprocessing import current_process, Lock, Process, Value
+from multiprocessing import current_process, Lock, Process, Value, Manager
 import logging
-from utils import calculate_chi2, argparse, to_hex, calculate_shannon_entropy, to_bin
+from utils import calculate_chi2, argparse, to_hex, calculate_shannon_entropy, to_bin, write_output
+import sys
+import matplotlib.pyplot as plt
 
-def multi_processing_section(lock, logger, vmdk_file, block_size, shared_offset, output_mod):
+def multi_processing_section(lock, logger, vmdk_file, block_size, shared_offset, output_mod, entropy_values, block_offsets):
 
     # Determines the size of the VMDK file
     file_size = os.path.getsize(vmdk_file)
@@ -22,7 +24,7 @@ def multi_processing_section(lock, logger, vmdk_file, block_size, shared_offset,
 
             # Take a short break after every 10th block read
             if reading_counter % 20 == 0 and reading_counter != 0:
-                print(f"{current_process().name}: Now sleeping!\n")
+                #print(f"{current_process().name}: Now sleeping!\n")
                 time.sleep(0.1)
 
             # Synchronizes access to shared resources with the lock
@@ -52,25 +54,32 @@ def multi_processing_section(lock, logger, vmdk_file, block_size, shared_offset,
 
                 # Calculates the Shannon entropy of the block
                 block_entropy = calculate_shannon_entropy(np.frombuffer(block, dtype=np.uint8))
+                chi2_statistic, p_value = calculate_chi2(block)
+
+                entropy_values.append(block_entropy)
+                block_offsets.append(shared_offset.value)
 
                 # if the entropy is greater than 7.9, then the block will be logged onto the console
                 if block_entropy > 7.9:
+                    sys.stdout.write(f"{current_process().name}: {block_entropy}, {block}\n")
                     #print(f"Process - {current_process().name}, Counter - {reading_counter}, Offset - {shared_offset.value}, Entropy - {block_entropy}\n")
-                    logger.warning(f"Process: {current_process().name}, Counter: {reading_counter},read from offset: {shared_offset.value} : {block_entropy} Entropy \n")
+                    #logger.warning(f"Process: {current_process().name}, Counter: {reading_counter},read from offset: {shared_offset.value} : {block_entropy} Entropy \n")
                 #logger.info(f"Process: {process_id}, Counter: {counter.value},read from offset: {pos} : {block} bytes \n")
                 #print(f"Process: {current_process().name}, read from offset: {pos} : {block} \n")
-                #    chi2_statistic, p_value = calculate_chi2(np.frombuffer(block, dtype=np.uint8))
-                #    if p_value > 0.05 :
-                #        sus
-                #    elif p_value < 0.05 :
-                #        not sus
+
+                    if p_value > 0.05 :
+                        sys.stdout.write(f"{current_process().name}: {chi2_statistic}, {p_value}\n")
+                    else:
+                        write_output(output_file, current_process().name, shared_offset.value, block, output_mod, chi2_statistic=chi2_statistic, p_value=p_value)
+
                 else:
-                    if output_mod == 0:
-                        output_file.write(f"{current_process().name} : Entropy: {block_entropy}, Offset-{shared_offset.value}, Block: {block}\n")
-                    elif output_mod == 1:
-                        output_file.write(f"{current_process().name} : Offset-{shared_offset.value}, Block: {to_hex(block)}\n")
-                    elif output_mod == 2:
-                        output_file.write(f"{current_process().name} : Offset-{shared_offset.value}, Block: {to_bin(block)}\n")
+                    write_output(output_file, current_process().name, shared_offset.value, block, output_mod, entropy=block_entropy)
+                    #if output_mod == 0:
+                    #    output_file.write(f"{current_process().name} : Entropy: {block_entropy}, Offset-{shared_offset.value}, Block: {block}\n")
+                    #elif output_mod == 1:
+                    #    output_file.write(f"{current_process().name} : Offset-{shared_offset.value}, Block: {to_hex(block)}\n")
+                    #elif output_mod == 2:
+                    #    output_file.write(f"{current_process().name} : Offset-{shared_offset.value}, Block: {to_bin(block)}\n")
 
 
                 # ---------- Ende Berechnung ----------
@@ -85,7 +94,17 @@ def multi_processing_section(lock, logger, vmdk_file, block_size, shared_offset,
 
     print(f"Process: {current_process().name} has finished\n")
 
-
+def plot_entropy(block_offsets, entropy_values):
+    plt.figure(figsize=(10, 5))
+    plt.plot(block_offsets, entropy_values, marker='o', linestyle='-', color='b', label='Entropie')
+    plt.xlabel("Speicherbereich (Offset in Bytes)")
+    plt.ylabel("Entropie")
+    plt.title("Entropieverlauf der Datei")
+    plt.grid(True)
+    plt.xticks(np.linspace(min(block_offsets), max(block_offsets), 5))  # Setzt 5 gleichmäßig verteilte X-Ticks
+    plt.legend()
+    plt.savefig("entropy_plot.png")
+    plt.show()
 
 
 
@@ -101,15 +120,15 @@ if __name__ == '__main__':
     args = argparse()
 
     # Saves the path to the file from the passed arguments
-    file_path = args.file
+    file_path = args.input
 
     # Defines the block size for reading the file
     block_size = args.block_size
 
     # Defines the number of processes to be started
-    num_processes = args.num_processes
+    num_processes = args.processes
 
-    output_mode = args.outputmode
+    output_mode = args.mode
 
     # Creates a common counter (Long) that is used by all processes
     counter = Value('l', 0)
@@ -117,13 +136,21 @@ if __name__ == '__main__':
     # Starts the time measurement to calculate the total duration of the programme
     start = datetime.now()
 
-    # Multiprocessing
-    processes = []
-    for i in range(num_processes):
-        p = Process(target=multi_processing_section, args=(lock, logger, file_path, block_size, counter, output_mode))
-        processes.append(p)
-        p.start()
-    for p in processes:
-        p.join()
+    with Manager() as manager:
+        entropy_values = manager.list()
+        block_offsets = manager.list()
 
-    print(f"Time taken: {(datetime.now() - start).total_seconds()} seconds")
+        # Multiprocessing
+        processes = []
+        for i in range(num_processes):
+            p = Process(target=multi_processing_section, args=(lock, logger, file_path, block_size, counter, output_mode, entropy_values, block_offsets))
+            processes.append(p)
+            p.start()
+        for p in processes:
+            p.join()
+
+        plot_entropy(entropy_values, entropy_values)
+
+    #print(f"Time taken: {(datetime.now() - start).total_seconds()} seconds")
+    sys.stderr.write(f"Time taken: {(datetime.now() - start).total_seconds()} seconds\n")
+
