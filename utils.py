@@ -31,6 +31,20 @@ def calculate_chi2(chunk):
     
     return chi2_statistic, p_value
 
+def calculate_nibbles_chi2(chunk):
+    nibbles = np.fromiter(convert_to_nibbles(chunk), dtype=np.uint8)
+
+    if chunk is None or len(chunk) == 0:
+        logging.warning('Empty chunk')
+
+    f_obs = np.bincount(nibbles, minlength=16)
+    #f_exp = np.full(16, len(chunk) / 16)
+
+    chi2_statistic, p_value = chisquare(f_obs)
+
+    return chi2_statistic, p_value
+
+
 def to_hex(block):
     formatted_hex = ' '.join(['{:02x}'.format(b) for b in block])
     return formatted_hex
@@ -44,8 +58,27 @@ def convert_to_nibbles(block):
         yield byte >> 4
         yield byte & 0x0F
 
+def write_output(file, process_name, offset, block, output_mod, entropy=None, chi2_statistic=None, p_value=None):
+    message = f"{process_name} : Offset-{offset}, "
+
+    if entropy is not None:
+        message += f"Entropy: {entropy}, "
+
+    if chi2_statistic is not None and p_value is not None:
+        message += f"Chi2 statistic: {chi2_statistic}, p: {p_value}, "
+
+    if output_mod == 0:
+        message += f"Block: {block}"
+    elif output_mod == 1:
+        message += f"Block: {to_hex(block)}"
+    elif output_mod == 2:
+        message += f"Block: {to_bin(block)}"
+
+    file.write(message + "\n")
+
+
 def argparse():
-    parser = ArgumentParser(description="Detect intermittent encryption and extract unencrypted blocks")
+    parser = ArgumentParser(description="Detect intermittent encryption and extract encrypted blocks")
 
     parser.add_argument('-i', '--input', metavar='FILE', required=True, help='Vmdk file to process', type=str)
 
@@ -55,7 +88,7 @@ def argparse():
 
     parser.add_argument('-p', '--processes', metavar='NUM', required=True, help='Number of processes to use', type=int)
 
-    #parser.add_argument('-m','--mode', metavar='MODE', required=True, help='Output mode', type=int, default=0)
+    parser.add_argument('-m','--mode', metavar='MODE', required=True, help='Output mode', type=int, default=0)
 
     args = parser.parse_args()
 

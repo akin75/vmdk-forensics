@@ -8,7 +8,7 @@ from utils import calculate_chi2, argparse, to_hex, calculate_shannon_entropy, t
 import sys
 import matplotlib.pyplot as plt
 
-def multi_processing_section(lock, logger, vmdk_file, block_size, shared_offset, output_mod, entropy_values, block_offsets):
+def multi_processing_section(lock, vmdk_file, block_size, shared_offset, output_mod, entropy_values, block_offsets):
 
     # Determines the size of the VMDK file
     file_size = os.path.getsize(vmdk_file)
@@ -94,16 +94,31 @@ def multi_processing_section(lock, logger, vmdk_file, block_size, shared_offset,
 
     print(f"Process: {current_process().name} has finished\n")
 
-def plot_entropy(block_offsets, entropy_values):
+def plot_entropy_curve(block_offsets, entropy_values):
+    """Erstellt ein Diagramm für den Verlauf der Entropie und speichert es"""
     plt.figure(figsize=(10, 5))
-    plt.plot(block_offsets, entropy_values, marker='o', linestyle='-', color='b', label='Entropie')
+
+    block_offsets = np.array(block_offsets)
+    entropy_values = np.array(entropy_values)
+
+    # Falls genügend Datenpunkte vorhanden sind, glätten mit NumPy-Interpolation
+    if len(block_offsets) > 3:
+        x_smooth = np.linspace(block_offsets.min(), block_offsets.max(), 300)
+        y_smooth = np.interp(x_smooth, block_offsets, entropy_values)
+        plt.plot(x_smooth, y_smooth, linestyle='-', color='b', label='Geglättete Entropie')
+    else:
+        plt.plot(block_offsets, entropy_values, linestyle='-', color='b', label='Entropie')
+
     plt.xlabel("Speicherbereich (Offset in Bytes)")
     plt.ylabel("Entropie")
-    plt.title("Entropieverlauf der Datei")
+    plt.title("Verlauf der Entropie in der Datei")
     plt.grid(True)
-    plt.xticks(np.linspace(min(block_offsets), max(block_offsets), 5))  # Setzt 5 gleichmäßig verteilte X-Ticks
+
+    # X-Achse gleichmäßig skalieren
+    plt.xticks(np.linspace(block_offsets.min(), block_offsets.max(), 5))
+
     plt.legend()
-    plt.savefig("entropy_plot.png")
+    plt.savefig("entropy_plot.png")  # Speichert das Diagramm als PNG-Datei
     plt.show()
 
 
@@ -111,7 +126,7 @@ def plot_entropy(block_offsets, entropy_values):
 
 if __name__ == '__main__':
     # Creates a logger for the current module
-    logger = logging.getLogger(__name__)
+    #logger = logging.getLogger(__name__)
 
     # Creates a lock object for synchronisation between processes
     lock = Lock()
@@ -143,13 +158,13 @@ if __name__ == '__main__':
         # Multiprocessing
         processes = []
         for i in range(num_processes):
-            p = Process(target=multi_processing_section, args=(lock, logger, file_path, block_size, counter, output_mode, entropy_values, block_offsets))
+            p = Process(target=multi_processing_section, args=(lock, file_path, block_size, counter, output_mode, entropy_values, block_offsets))
             processes.append(p)
             p.start()
         for p in processes:
             p.join()
 
-        plot_entropy(entropy_values, entropy_values)
+        plot_entropy_curve(list(block_offsets), list(entropy_values))
 
     #print(f"Time taken: {(datetime.now() - start).total_seconds()} seconds")
     sys.stderr.write(f"Time taken: {(datetime.now() - start).total_seconds()} seconds\n")
