@@ -91,6 +91,12 @@ def test_convert_to_nibbles():
     print(chi2_statistic2, p_value2)
     print(chi2_statistic4, p_value4)
 
+def test_convert_to_nibbles2():
+    random_block2 = os.urandom(64)
+    converted_nibble = convert_to_nibbles(random_block2)
+    chi2_statistic, p_value = calculate_nibbles_chi2(random_block2)
+    print(chi2_statistic, p_value)
+    print(converted_nibble)
 
 
 def test_bin():

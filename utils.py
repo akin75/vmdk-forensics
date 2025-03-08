@@ -32,10 +32,11 @@ def calculate_chi2(chunk):
     return chi2_statistic, p_value
 
 def calculate_nibbles_chi2(chunk):
-    nibbles = np.fromiter(convert_to_nibbles(chunk), dtype=np.uint8)
 
     if chunk is None or len(chunk) == 0:
         logging.warning('Empty chunk')
+
+    nibbles = convert_to_nibbles(chunk)
 
     f_obs = np.bincount(nibbles, minlength=16)
     #f_exp = np.full(16, len(chunk) / 16)
@@ -54,9 +55,12 @@ def to_bin(block):
     return formatted_bin
 
 def convert_to_nibbles(block):
-    for byte in block:
-        yield byte >> 4
-        yield byte & 0x0F
+    """Konvertiert ein Byte-Array in ein NumPy-Array von Nibbles"""
+    block_array = np.frombuffer(block, dtype=np.uint8)  # Bytes zu NumPy-Array konvertieren
+    high_nibble = block_array >> 4  # Höheres Nibble extrahieren
+    low_nibble = block_array & 0x0F  # Niedrigeres Nibble extrahieren
+    nibbles = np.concatenate((high_nibble, low_nibble))
+    return nibbles
 
 def write_output(file, process_name, offset, block, output_mod, entropy=None, chi2_statistic=None, p_value=None):
     message = f"{process_name} : Offset-{offset}, "
@@ -75,6 +79,14 @@ def write_output(file, process_name, offset, block, output_mod, entropy=None, ch
         message += f"Block: {to_bin(block)}"
 
     file.write(message + "\n")
+
+def check_block_size_for_chi2(block):
+    if len(block) > 1300:
+        chi2_statistic, p_value = calculate_chi2(block)
+    else:
+        chi2_statistic, p_value = calculate_nibbles_chi2(block)
+
+    return chi2_statistic, p_value
 
 
 def argparse():

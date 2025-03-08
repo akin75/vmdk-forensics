@@ -4,7 +4,7 @@ from datetime import datetime
 import numpy as np
 from multiprocessing import current_process, Lock, Process, Value, Manager
 import logging
-from utils import calculate_chi2, argparse, to_hex, calculate_shannon_entropy, to_bin, write_output
+from utils import calculate_chi2, argparse, to_hex, calculate_shannon_entropy, to_bin, write_output, check_block_size_for_chi2
 import sys
 import matplotlib.pyplot as plt
 
@@ -54,32 +54,22 @@ def multi_processing_section(lock, vmdk_file, block_size, shared_offset, output_
 
                 # Calculates the Shannon entropy of the block
                 block_entropy = calculate_shannon_entropy(np.frombuffer(block, dtype=np.uint8))
-                chi2_statistic, p_value = calculate_chi2(block)
+                chi2_statistic, p_value = check_block_size_for_chi2(block)
 
                 entropy_values.append(block_entropy)
                 block_offsets.append(shared_offset.value)
 
                 # if the entropy is greater than 7.9, then the block will be logged onto the console
                 if block_entropy > 7.9:
-                    sys.stdout.write(f"{current_process().name}: {block_entropy}, {block}\n")
-                    #print(f"Process - {current_process().name}, Counter - {reading_counter}, Offset - {shared_offset.value}, Entropy - {block_entropy}\n")
-                    #logger.warning(f"Process: {current_process().name}, Counter: {reading_counter},read from offset: {shared_offset.value} : {block_entropy} Entropy \n")
-                #logger.info(f"Process: {process_id}, Counter: {counter.value},read from offset: {pos} : {block} bytes \n")
-                #print(f"Process: {current_process().name}, read from offset: {pos} : {block} \n")
+                    sys.stdout.write(f"{current_process().name}, Pos: {shared_offset.value} : {block_entropy}, {block}\n")
 
                     if p_value > 0.05 :
-                        sys.stdout.write(f"{current_process().name}: {chi2_statistic}, {p_value}\n")
+                        sys.stdout.write(f"{current_process().name}, Pos: {shared_offset.value}: {chi2_statistic}, {p_value}, {block}\n")
                     else:
                         write_output(output_file, current_process().name, shared_offset.value, block, output_mod, chi2_statistic=chi2_statistic, p_value=p_value)
 
                 else:
                     write_output(output_file, current_process().name, shared_offset.value, block, output_mod, entropy=block_entropy)
-                    #if output_mod == 0:
-                    #    output_file.write(f"{current_process().name} : Entropy: {block_entropy}, Offset-{shared_offset.value}, Block: {block}\n")
-                    #elif output_mod == 1:
-                    #    output_file.write(f"{current_process().name} : Offset-{shared_offset.value}, Block: {to_hex(block)}\n")
-                    #elif output_mod == 2:
-                    #    output_file.write(f"{current_process().name} : Offset-{shared_offset.value}, Block: {to_bin(block)}\n")
 
 
                 # ---------- Ende Berechnung ----------
