@@ -61,10 +61,12 @@ def multi_processing_section(lock, vmdk_file, block_size, shared_offset, output_
 
                 # if the entropy is greater than 7.9, then the block will be logged onto the console
                 if block_entropy > 7.9:
-                    sys.stdout.write(f"{current_process().name}, Pos: {shared_offset.value} : {block_entropy}, {block}\n")
+                    #sys.stdout.write(f"{current_process().name}, Pos: {shared_offset.value} : {block_entropy}, {block}\n")
+                    #sys.stdout.flush()
 
                     if p_value > 0.05 :
-                        sys.stdout.write(f"{current_process().name}, Pos: {shared_offset.value}: {chi2_statistic}, {p_value}, {block}\n")
+                        #sys.stdout.write(f"{current_process().name}, Pos: {shared_offset.value}: {chi2_statistic}, {p_value}, {block}\n")
+                        print(f"{current_process().name}, Pos: {shared_offset.value}: {chi2_statistic}, {p_value}, {block}\n")
                     else:
                         write_output(output_file, current_process().name, shared_offset.value, block, output_mod, chi2_statistic=chi2_statistic, p_value=p_value)
 
@@ -115,9 +117,6 @@ def plot_entropy_curve(block_offsets, entropy_values):
 
 
 if __name__ == '__main__':
-    # Creates a logger for the current module
-    #logger = logging.getLogger(__name__)
-
     # Creates a lock object for synchronisation between processes
     lock = Lock()
 
