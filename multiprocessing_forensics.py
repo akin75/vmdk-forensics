@@ -8,7 +8,7 @@ from utils import calculate_chi2, argparse, to_hex, calculate_shannon_entropy, t
 import sys
 import matplotlib.pyplot as plt
 
-def multi_processing_section(lock, vmdk_file, block_size, shared_offset, output_mod, entropy_values, block_offsets):
+def multi_processing_section(lock, vmdk_file, block_size, shared_offset, output_mod, entropy_values, block_offsets, file_output):
 
     # Determines the size of the VMDK file
     file_size = os.path.getsize(vmdk_file)
@@ -18,7 +18,7 @@ def multi_processing_section(lock, vmdk_file, block_size, shared_offset, output_
     reading_counter = 0
 
     # Opens the VMDK file in read mode (“rb”) and an output file in attachment mode (“a”)
-    with open(vmdk_file, "rb") as file, open("output.txt", "a") as output_file:
+    with open(vmdk_file, "rb") as file, open(file_output, "a") as output_file:
         # Continuous loop for reading the file
         while True:
 
@@ -52,27 +52,20 @@ def multi_processing_section(lock, vmdk_file, block_size, shared_offset, output_
 
                 # ---------- Start Berechnung ----------
 
-                # Calculates the Shannon entropy of the block
+                # Calculates the Shannon entropy and Chi-Square of the block
                 block_entropy = calculate_shannon_entropy(np.frombuffer(block, dtype=np.uint8))
                 chi2_statistic, p_value = check_block_size_for_chi2(block)
 
                 entropy_values.append(block_entropy)
                 block_offsets.append(shared_offset.value)
 
-                # if the entropy is greater than 7.9, then the block will be logged onto the console
                 if block_entropy > 7.9:
-                    #sys.stdout.write(f"{current_process().name}, Pos: {shared_offset.value} : {block_entropy}, {block}\n")
-                    #sys.stdout.flush()
 
                     if p_value > 0.05 :
-                        #sys.stdout.write(f"{current_process().name}, Pos: {shared_offset.value}: {chi2_statistic}, {p_value}, {block}\n")
-                        print(f"{current_process().name}, Pos: {shared_offset.value}: {chi2_statistic}, {p_value}, {block}\n")
+                        write_output(output_file, current_process().name, shared_offset.value, block, output_mod, entropy=block_entropy, chi2_statistic=chi2_statistic, p_value=p_value)
+                    # Still writing the blocks into the file, that were not within the threshold
                     else:
-                        write_output(output_file, current_process().name, shared_offset.value, block, output_mod, chi2_statistic=chi2_statistic, p_value=p_value)
-
-                else:
-                    write_output(output_file, current_process().name, shared_offset.value, block, output_mod, entropy=block_entropy)
-
+                        write_output(output_file, current_process().name, shared_offset.value, block, output_mod, entropy=block_entropy,chi2_statistic=chi2_statistic, p_value=p_value)
 
                 # ---------- Ende Berechnung ----------
 
@@ -86,8 +79,9 @@ def multi_processing_section(lock, vmdk_file, block_size, shared_offset, output_
 
     print(f"Process: {current_process().name} has finished\n")
 
+
 def plot_entropy_curve(block_offsets, entropy_values):
-    """Erstellt ein Diagramm für den Verlauf der Entropie und speichert es"""
+
     plt.figure(figsize=(10, 5))
 
     block_offsets = np.array(block_offsets)
@@ -126,6 +120,8 @@ if __name__ == '__main__':
     # Saves the path to the file from the passed arguments
     file_path = args.input
 
+    file_output = args.output
+
     # Defines the block size for reading the file
     block_size = args.block_size
 
@@ -147,7 +143,7 @@ if __name__ == '__main__':
         # Multiprocessing
         processes = []
         for i in range(num_processes):
-            p = Process(target=multi_processing_section, args=(lock, file_path, block_size, counter, output_mode, entropy_values, block_offsets))
+            p = Process(target=multi_processing_section, args=(lock, file_path, block_size, counter, output_mode, entropy_values, block_offsets, file_output))
             processes.append(p)
             p.start()
         for p in processes:

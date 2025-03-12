@@ -75,7 +75,7 @@ if __name__ == '__main__':
         pool.join()
 
     #for i, (block_entropy, current_pos, block)  in enumerate(results):
-    #    with open("output.txt", "a") as f:
+    #    with open("", "a") as f:
     #        f.write(f"{block_entropy}\t{current_pos:.5f}\t{block}\n")
     #print("Finished Writing")
 

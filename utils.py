@@ -61,10 +61,10 @@ def write_output(file, process_name, offset, block, output_mod, entropy=None, ch
     message = f"{process_name} : Offset-{offset}, "
 
     if entropy is not None:
-        message += f"Entropy: {entropy}, "
+        message += f" Entropy: {entropy}, "
 
     if chi2_statistic is not None and p_value is not None:
-        message += f"Chi2 statistic: {chi2_statistic}, p: {p_value}, "
+        message += f" Chi2 statistic: {chi2_statistic}, p: {p_value}, "
 
     if output_mod == 0:
         message += f"Block: {block}"
@@ -89,7 +89,7 @@ def argparse():
 
     parser.add_argument('-i', '--input', metavar='FILE', required=True, help='Vmdk file to process', type=str)
 
-    #parser.add_argument('-o', '--output', metavar='FILE', required=True, help='File to store output', type=str)
+    parser.add_argument('-o', '--output', metavar='FILE', required=True, help='File to store output', type=str)
 
     parser.add_argument('-block', '--block_size', metavar='SIZE', help='Block size to use', type=int, default=4096, dest="block_size")
 
