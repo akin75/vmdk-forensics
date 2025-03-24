@@ -4,14 +4,14 @@ from scipy.stats import entropy, chi2, chisquare
 import numpy as np
 import logging
 
-def calculate_shannon_entropy(chunk):
+def calculate_shannon_entropy(block):
     # Handling 0 Bytes
-    if chunk is None or len(chunk) == 0:
-        logging.warning('Empty chunk')
+    if block is None or len(block) == 0:
+        logging.warning('Empty block')
         return 0
 
     # Zählen wie oft jedes Element(Byte) vorkommt.
-    byte_count = np.bincount(chunk, minlength=256)
+    byte_count = np.bincount(block, minlength=256)
 
     # Array, mit der relativen Häufigkeit (Wahrscheinlichkeit) von jedem Byte.
     probabilities = byte_count / np.sum(byte_count)
@@ -20,23 +20,25 @@ def calculate_shannon_entropy(chunk):
 
 # https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.chisquare.html#r81ecfb019d82-1
 # Die ChiSquare Berechnung funktioniert auch nur mit den Observed Frequencies.
-def calculate_chi2(chunk):
-    if chunk is None or len(chunk) == 0:
-        logging.warning('Empty chunk')
+def calculate_chi2(block):
+    if block is None or len(block) == 0:
+        logging.warning('Empty block')
+        return 0
 
-    f_obs = np.bincount(np.frombuffer(chunk, dtype=np.uint8), minlength=256)
-    f_exp = np.full(256, len(chunk) / 256)
+    f_obs = np.bincount(np.frombuffer(block, dtype=np.uint8), minlength=256)
+    f_exp = np.full(256, len(block) / 256)
     # Gibt ein Objekt mit den Variablen = statistic (chi-squared statistic(Float-Wert)) und p-value (Der p-Wert des Tests(Float Wert))
     chi2_statistic, p_value = chisquare(f_obs, f_exp)
     
     return chi2_statistic, p_value
 
-def calculate_nibbles_chi2(chunk):
+def calculate_nibbles_chi2(block):
 
-    if chunk is None or len(chunk) == 0:
-        logging.warning('Empty chunk')
+    if block is None or len(block) == 0:
+        logging.warning('Empty block')
+        return 0
 
-    nibbles = np.array(convert_to_nibbles(chunk), dtype=np.uint8)
+    nibbles = np.array(convert_to_nibbles(block), dtype=np.uint8)
 
     f_obs = np.bincount(nibbles, minlength=16)
     #f_exp = np.full(16, len(chunk) / 16)

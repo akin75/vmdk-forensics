@@ -3,7 +3,6 @@ import time
 from datetime import datetime
 import numpy as np
 from multiprocessing import current_process, Lock, Process, Value, Manager
-import logging
 from utils import calculate_chi2, argparse, to_hex, calculate_shannon_entropy, to_bin, write_output, check_block_size_for_chi2
 import sys
 import matplotlib.pyplot as plt
@@ -24,7 +23,6 @@ def multi_processing_section(lock, vmdk_file, block_size, shared_offset, output_
 
             # Take a short break after every 10th block read
             if reading_counter % 20 == 0 and reading_counter != 0:
-                #print(f"{current_process().name}: Now sleeping!\n")
                 time.sleep(0.1)
 
             # Synchronizes access to shared resources with the lock
@@ -60,10 +58,8 @@ def multi_processing_section(lock, vmdk_file, block_size, shared_offset, output_
                 block_offsets.append(shared_offset.value)
 
                 if block_entropy > 7.9:
-
-                    if p_value > 0.05 :
-                        write_output(output_file, current_process().name, shared_offset.value, block, output_mod, entropy=block_entropy, chi2_statistic=chi2_statistic, p_value=p_value)
-                    # Still writing the blocks into the file, that were not within the threshold
+                    if p_value <= 0.05 or p_value >= 0.95 :
+                        pass
                     else:
                         write_output(output_file, current_process().name, shared_offset.value, block, output_mod, entropy=block_entropy,chi2_statistic=chi2_statistic, p_value=p_value)
 
@@ -80,20 +76,14 @@ def multi_processing_section(lock, vmdk_file, block_size, shared_offset, output_
     print(f"Process: {current_process().name} has finished\n")
 
 
-def plot_entropy_curve(block_offsets, entropy_values):
+def plot_entropy(block_offsets, entropy_values):
 
     plt.figure(figsize=(10, 5))
 
     block_offsets = np.array(block_offsets)
     entropy_values = np.array(entropy_values)
 
-    # Falls genügend Datenpunkte vorhanden sind, glätten mit NumPy-Interpolation
-    if len(block_offsets) > 3:
-        x_smooth = np.linspace(block_offsets.min(), block_offsets.max(), 300)
-        y_smooth = np.interp(x_smooth, block_offsets, entropy_values)
-        plt.plot(x_smooth, y_smooth, linestyle='-', color='b', label='Geglättete Entropie')
-    else:
-        plt.plot(block_offsets, entropy_values, linestyle='-', color='b', label='Entropie')
+    plt.plot(block_offsets, entropy_values, linestyle='-', color='b', label='Entropie')
 
     plt.xlabel("Speicherbereich (Offset in Bytes)")
     plt.ylabel("Entropie")
@@ -101,11 +91,10 @@ def plot_entropy_curve(block_offsets, entropy_values):
     plt.grid(True)
 
     # X-Achse gleichmäßig skalieren
-    plt.xticks(np.linspace(block_offsets.min(), block_offsets.max(), 5))
+    plt.xticks(np.linspace(block_offsets.min(), block_offsets.max(), 3))
 
     plt.legend()
-    plt.savefig("entropy_plot.png")  # Speichert das Diagramm als PNG-Datei
-    plt.show()
+    plt.savefig("entropy_plot.png")
 
 
 
@@ -133,7 +122,7 @@ if __name__ == '__main__':
     # Creates a common counter (Long) that is used by all processes
     counter = Value('l', 0)
 
-    # Starts the time measurement to calculate the total duration of the programme
+    # Starts the time measurement to calculate the total duration of the programm
     start = datetime.now()
 
     with Manager() as manager:
@@ -149,8 +138,8 @@ if __name__ == '__main__':
         for p in processes:
             p.join()
 
-        plot_entropy_curve(list(block_offsets), list(entropy_values))
+        plot_entropy(list(block_offsets), list(entropy_values))
 
     #print(f"Time taken: {(datetime.now() - start).total_seconds()} seconds")
-    sys.stderr.write(f"Time taken: {(datetime.now() - start).total_seconds()} seconds\n")
+    sys.stdout.write(f"Time taken: {(datetime.now() - start).total_seconds()} seconds\n")
 
