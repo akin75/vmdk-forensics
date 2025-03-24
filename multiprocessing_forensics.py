@@ -62,7 +62,9 @@ def multi_processing_section(lock, vmdk_file, block_size, shared_offset, output_
                         pass
                     else:
                         write_output(output_file, current_process().name, shared_offset.value, block, output_mod, entropy=block_entropy,chi2_statistic=chi2_statistic, p_value=p_value)
-
+                else:
+                    write_output(output_file, current_process().name, shared_offset.value, block, output_mod,
+                                 entropy=block_entropy, chi2_statistic=chi2_statistic, p_value=p_value)
                 # ---------- Ende Berechnung ----------
 
                 #Updates the common offset by the size of the current block
