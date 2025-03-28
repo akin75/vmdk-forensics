@@ -58,7 +58,7 @@ def multi_processing_section(lock, vmdk_file, block_size, shared_offset, output_
                 block_offsets.append(shared_offset.value)
 
                 if block_entropy > 7.9:
-                    if p_value <= 0.05 or p_value >= 0.95 :
+                    if 0.05 < p_value < 0.95:
                         pass
                     else:
                         write_output(output_file, current_process().name, shared_offset.value, block, output_mod, entropy=block_entropy,chi2_statistic=chi2_statistic, p_value=p_value)
@@ -96,7 +96,7 @@ def plot_entropy(block_offsets, entropy_values):
     plt.xticks(np.linspace(block_offsets.min(), block_offsets.max(), 3))
 
     plt.legend()
-    plt.savefig("entropy_plot.png")
+    plt.savefig("Entropy-plot.png")
 
 
 
