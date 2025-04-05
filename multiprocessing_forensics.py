@@ -7,7 +7,7 @@ from utils import calculate_chi2, argparse, to_hex, calculate_shannon_entropy, t
 import sys
 import matplotlib.pyplot as plt
 
-def multi_processing_section(lock, vmdk_file, block_size, shared_offset, output_mod, entropy_values, block_offsets, file_output):
+def multi_processing_section(lock, vmdk_file, block_size, shared_offset, entropy_values, block_offsets, file_output):
 
     # Determines the size of the VMDK file
     file_size = os.path.getsize(vmdk_file)
@@ -17,7 +17,7 @@ def multi_processing_section(lock, vmdk_file, block_size, shared_offset, output_
     reading_counter = 0
 
     # Opens the VMDK file in read mode (“rb”) and an output file in attachment mode (“a”)
-    with open(vmdk_file, "rb") as file, open(file_output, "a") as output_file:
+    with open(vmdk_file, "rb") as file, open(file_output, "ab") as output_file:
         # Continuous loop for reading the file
         while True:
 
@@ -61,10 +61,11 @@ def multi_processing_section(lock, vmdk_file, block_size, shared_offset, output_
                     if 0.05 < p_value < 0.95:
                         pass
                     else:
-                        write_output(output_file, current_process().name, shared_offset.value, block, output_mod, entropy=block_entropy,chi2_statistic=chi2_statistic, p_value=p_value)
+                        output_file.write(block)
+                        #write_output(output_file, current_process().name, shared_offset.value, block, output_mod, entropy=block_entropy,chi2_statistic=chi2_statistic, p_value=p_value)
                 else:
-                    write_output(output_file, current_process().name, shared_offset.value, block, output_mod,
-                                 entropy=block_entropy, chi2_statistic=chi2_statistic, p_value=p_value)
+                    output_file.write(block)
+                    #write_output(output_file, current_process().name, shared_offset.value, block, output_mod,entropy=block_entropy, chi2_statistic=chi2_statistic, p_value=p_value)
                 # ---------- Ende Berechnung ----------
 
                 #Updates the common offset by the size of the current block
@@ -96,7 +97,7 @@ def plot_entropy(block_offsets, entropy_values):
     plt.xticks(np.linspace(block_offsets.min(), block_offsets.max(), 3))
 
     plt.legend()
-    plt.savefig("Entropy-plot.png")
+    plt.savefig("Entropy-Akira-10GB.png")
 
 
 
@@ -119,8 +120,6 @@ if __name__ == '__main__':
     # Defines the number of processes to be started
     num_processes = args.processes
 
-    output_mode = args.mode
-
     # Creates a common counter (Long) that is used by all processes
     counter = Value('l', 0)
 
@@ -134,13 +133,13 @@ if __name__ == '__main__':
         # Multiprocessing
         processes = []
         for i in range(num_processes):
-            p = Process(target=multi_processing_section, args=(lock, file_path, block_size, counter, output_mode, entropy_values, block_offsets, file_output))
+            p = Process(target=multi_processing_section, args=(lock, file_path, block_size, counter, entropy_values, block_offsets, file_output))
             processes.append(p)
             p.start()
         for p in processes:
             p.join()
 
-        plot_entropy(list(block_offsets), list(entropy_values))
+        #plot_entropy(list(block_offsets), list(entropy_values))
 
     #print(f"Time taken: {(datetime.now() - start).total_seconds()} seconds")
     sys.stdout.write(f"Time taken: {(datetime.now() - start).total_seconds()} seconds\n")

@@ -1,83 +1,81 @@
-#import sys
 import os
-#import time
+import time
 from datetime import datetime
 import numpy as np
-#from BlockDevice import BlockDevice
-from multiprocessing import Pool, current_process, Lock, Value
-import logging
-from utils import calculate_chi2, argparse, to_hex, calculate_shannon_entropy, to_bin
+from utils import calculate_chi2, argparse, to_hex, calculate_shannon_entropy, to_bin, write_output, check_block_size_for_chi2
+import sys
+import matplotlib.pyplot as plt
+from tqdm import tqdm
 
-logger = logging.getLogger(__name__)
-lock = Lock()
-logging.basicConfig(
-    level=logging.DEBUG,
-    format='%(asctime)s - %(processName)s - PID: %(process)d - %(levelname)s - %(message)s',
-    handlers=[logging.StreamHandler()],
-)
-counter = Value('l', 0)
 
-def read_chunks_of_vmdk(vmdk_file, block_size):
-    filesize = os.path.getsize(vmdk_file)
+def process_file_single(file_input, block_size, file_output, entropy_values, block_offsets):
+    file_size = os.path.getsize(file_input)
     bytes_read = 0
+    reading_counter = 0
 
-    with open(vmdk_file, "rb") as f:
+    with open(file_input, "rb") as file, open(file_output, "wb") as output_file:
+        with tqdm(total=file_size, unit='B', unit_scale=True, desc="Processing") as progress:
+            while True:
 
-        f.seek(0)
+                remaining_bytes = file_size - bytes_read
+                current_block_size = min(block_size, remaining_bytes)
 
-        while bytes_read < filesize:
+                block = file.read(current_block_size)
+                if not block:
+                    break
 
-            remaining_bytes = filesize - bytes_read
-            current_block_size = min(block_size, remaining_bytes)
-            block = f.read(block_size)
-            current_pos = f.tell()
-            #print("READING")
-            if not block:
-                break
-            yield block, current_pos
+                # ---------- Start Berechnung ----------
+                block_entropy = calculate_shannon_entropy(np.frombuffer(block, dtype=np.uint8))
+                chi2_statistic, p_value = check_block_size_for_chi2(block)
 
-            bytes_read += current_block_size
+                entropy_values.append(block_entropy)
+                block_offsets.append(bytes_read)
+
+                if block_entropy > 7.9:
+                    if 0.05 < p_value < 0.95:
+                        pass
+                    else:
+                        output_file.write(block)
+                else:
+                    output_file.write(block)
+                # ---------- Ende Berechnung ----------
+
+                bytes_read += current_block_size
+                reading_counter += 1
+                progress.update(current_block_size)
+
+    print("[Done] Processing finished.\n")
 
 
+def plot_entropy(block_offsets, entropy_values):
+    plt.figure(figsize=(10, 5))
+    block_offsets = np.array(block_offsets)
+    entropy_values = np.array(entropy_values)
 
-def processing_section(args):
-    #print("Process Starting")
+    plt.plot(block_offsets, entropy_values, linestyle='-', color='b', label='Entropie')
 
-
-    with lock:
-        block, current_pos = args
-
-        block_entropy = calculate_shannon_entropy(np.frombuffer(block, dtype=np.uint8))
-        if block_entropy > 7.90:
-        # chunk_chisquare = calculate_chisquare(...)
-        #print(f"Process: {current_process().name}, Entropy: {block_entropy:.5f}, Position: {current_pos} \n")
-            logger.info(f" Entropy: {block_entropy:.5f}, Position: {current_pos}")#
-            counter.value += 1
-
-    #print("Shannon Entropy Calculation Ended")
-    return block_entropy, current_pos, to_bin(block)
+    plt.xlabel("Speicherbereich (Offset in Bytes)")
+    plt.ylabel("Entropie")
+    plt.title("Verlauf der Entropie in der Datei")
+    plt.grid(True)
+    plt.xticks(np.linspace(block_offsets.min(), block_offsets.max(), 3))
+    plt.legend()
+    plt.savefig("Entropy-plot.png")
 
 
 if __name__ == '__main__':
-    #logger = logging.getLogger(__name__)
-    #vmdk_file = BlockDevice(file_object="100MB_Test.vmdk.akira")
-    #"100MB_Test-flat.vmdk.akira"
     args = argparse()
-    vmdk_file2 = args.input
+    file_input = args.input
+    file_output = args.output
     block_size = args.block_size
-    num_processes = args.processes
+
     start = datetime.now()
 
+    entropy_values = []
+    block_offsets = []
 
-    with Pool(processes=num_processes) as pool:
-        results = pool.imap(processing_section, read_chunks_of_vmdk(vmdk_file2, block_size))
-        pool.close()
-        pool.join()
+    process_file_single(file_input, block_size, file_output, entropy_values, block_offsets)
 
-    #for i, (block_entropy, current_pos, block)  in enumerate(results):
-    #    with open("", "a") as f:
-    #        f.write(f"{block_entropy}\t{current_pos:.5f}\t{block}\n")
-    #print("Finished Writing")
+    plot_entropy(block_offsets, entropy_values)
 
-
-    print(f"Time taken: {(datetime.now() - start).total_seconds()} seconds")
+    sys.stdout.write(f"Time taken: {(datetime.now() - start).total_seconds():.2f} seconds\n")

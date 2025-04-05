@@ -49,7 +49,7 @@ def calculate_nibbles_chi2(block):
 
 
 def to_hex(block):
-    formatted_hex = ' '.join(['{:02x}'.format(b) for b in block])
+    formatted_hex = ' '.join(['{:02x}'.format(b) for b in block]).upper()
     return formatted_hex
 
 def to_bin(block):
@@ -97,7 +97,7 @@ def argparse():
 
     parser.add_argument('-p', '--processes', metavar='NUM', required=True, help='Number of processes to use', type=int)
 
-    parser.add_argument('-m','--mode', metavar='MODE', required=True, help='Output mode', type=int, default=0)
+    #parser.add_argument('-m','--mode', metavar='MODE', required=True, help='Output mode', type=int, default=0)
 
     args = parser.parse_args()
 
