@@ -11,7 +11,6 @@ from tqdm import tqdm
 def processing_section(file_input, block_size, file_output, entropy_values, block_offsets):
     file_size = os.path.getsize(file_input)
     bytes_read = 0
-    reading_counter = 0
 
     with open(file_input, "rb") as file, open(file_output, "wb") as output_file:
         with tqdm(total=file_size, unit='B', unit_scale=True, desc="Processing") as progress:
