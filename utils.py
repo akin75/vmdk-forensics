@@ -18,8 +18,6 @@ def calculate_shannon_entropy(block):
 
     return entropy(probabilities, base=2)
 
-# https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.chisquare.html#r81ecfb019d82-1
-# Die ChiSquare Berechnung funktioniert auch nur mit den Observed Frequencies.
 def calculate_chi2(block):
     if block is None or len(block) == 0:
         logging.warning('Empty block')
@@ -48,34 +46,8 @@ def calculate_nibbles_chi2(block):
     return chi2_statistic, p_value
 
 
-def to_hex(block):
-    formatted_hex = ' '.join(['{:02x}'.format(b) for b in block]).upper()
-    return formatted_hex
-
-def to_bin(block):
-    formatted_bin = ' '.join(f'{byte:08b}' for byte in block)
-    return formatted_bin
-
 def convert_to_nibbles(block):
     return [nibble for byte in block for nibble in (byte >> 4, byte & 0x0F)]
-
-def write_output(file, process_name, offset, block, output_mod, entropy=None, chi2_statistic=None, p_value=None):
-    message = f"{process_name} : Offset-{offset}, "
-
-    if entropy is not None:
-        message += f" Entropy: {entropy}, "
-
-    if chi2_statistic is not None and p_value is not None:
-        message += f" Chi2 statistic: {chi2_statistic}, p: {p_value}, "
-
-    if output_mod == 0:
-        message += f"Block: {block}"
-    elif output_mod == 1:
-        message += f"Block: {to_hex(block)}"
-    elif output_mod == 2:
-        message += f"Block: {to_bin(block)}"
-
-    file.write(message + "\n")
 
 def check_block_size_for_chi2(block):
     if len(block) > 1300:
@@ -95,17 +67,6 @@ def argparse():
 
     parser.add_argument('-block', '--block_size', metavar='SIZE', help='Block size to use', type=int, default=4096, dest="block_size")
 
-    parser.add_argument('-p', '--processes', metavar='NUM', required=True, help='Number of processes to use', type=int)
-
-    #parser.add_argument('-m','--mode', metavar='MODE', required=True, help='Output mode', type=int, default=0)
-
     args = parser.parse_args()
-
-    # Check for VMDK file
-    #if "vmdk" not in args.input.lower():
-    #    parser.error('Input file must be vmdk')
-    # Check if file exists
-    #if not os.path.isfile(args.input):
-    #    parser.error(f"Input file {args.input} does not exist")
 
     return args

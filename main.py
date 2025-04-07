@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 from tqdm import tqdm
 
 
-def process_file_single(file_input, block_size, file_output, entropy_values, block_offsets):
+def processing_section(file_input, block_size, file_output, entropy_values, block_offsets):
     file_size = os.path.getsize(file_input)
     bytes_read = 0
     reading_counter = 0
@@ -28,8 +28,8 @@ def process_file_single(file_input, block_size, file_output, entropy_values, blo
                 block_entropy = calculate_shannon_entropy(np.frombuffer(block, dtype=np.uint8))
                 chi2_statistic, p_value = check_block_size_for_chi2(block)
 
-                entropy_values.append(block_entropy)
-                block_offsets.append(bytes_read)
+                #entropy_values.append(block_entropy)
+                #block_offsets.append(bytes_read)
 
                 if block_entropy > 7.9:
                     if 0.05 < p_value < 0.95:
@@ -74,7 +74,7 @@ if __name__ == '__main__':
     entropy_values = []
     block_offsets = []
 
-    process_file_single(file_input, block_size, file_output, entropy_values, block_offsets)
+    processing_section(file_input, block_size, file_output, entropy_values, block_offsets)
 
     plot_entropy(block_offsets, entropy_values)
 

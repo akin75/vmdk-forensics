@@ -4,7 +4,7 @@ import numpy as np
 from multiprocessing import Pool, current_process, Value, Lock, Manager
 import matplotlib.pyplot as plt
 
-from utils import calculate_shannon_entropy, check_block_size_for_chi2, argparse, to_bin
+from utils import calculate_shannon_entropy, check_block_size_for_chi2, argparse
 
 lock = Lock()
 counter = Value('l', 0)
