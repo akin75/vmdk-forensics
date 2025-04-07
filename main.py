@@ -28,8 +28,8 @@ def processing_section(file_input, block_size, file_output, entropy_values, bloc
                 block_entropy = calculate_shannon_entropy(np.frombuffer(block, dtype=np.uint8))
                 chi2_statistic, p_value = check_block_size_for_chi2(block)
 
-                #entropy_values.append(block_entropy)
-                #block_offsets.append(bytes_read)
+                entropy_values.append(block_entropy)
+                block_offsets.append(bytes_read)
 
                 if block_entropy > 7.9:
                     if 0.05 < p_value < 0.95:
