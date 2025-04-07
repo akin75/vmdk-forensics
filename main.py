@@ -2,7 +2,7 @@ import os
 import time
 from datetime import datetime
 import numpy as np
-from utils import calculate_chi2, argparse, to_hex, calculate_shannon_entropy, to_bin, write_output, check_block_size_for_chi2
+from utils import calculate_chi2, argparse, calculate_shannon_entropy, check_block_size_for_chi2
 import sys
 import matplotlib.pyplot as plt
 from tqdm import tqdm
