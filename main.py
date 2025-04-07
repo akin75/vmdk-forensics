@@ -40,7 +40,6 @@ def processing_section(file_input, block_size, file_output, entropy_values, bloc
                 # ---------- Ende Berechnung ----------
 
                 bytes_read += current_block_size
-                reading_counter += 1
                 progress.update(current_block_size)
 
     print("[Done] Processing finished.\n")
